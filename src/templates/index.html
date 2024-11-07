@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Registro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+        }
+        .form-container {
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 400px;
+        }
+        .form-container h2 {
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group input[type="text"]:focus {
+            border-color: #007bff;
+        }
+        .form-group .button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .form-group .button:hover {
+            background-color: #0056b3;
+        }
+        #map {
+            width: 400px;
+            height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2>Formulario de Registro</h2>
+            <form id="registrationForm" action="/registrar_usuario" method="POST">
+                <div class="form-group">
+                    <label for="document">Número de Documento</label>
+                    <input type="text" id="document" name="document" placeholder="Ingrese su número de documento">
+                </div>
+                <div class="form-group">
+                    <label for="name">Nombres</label>
+                    <input type="text" id="name" name="name" placeholder="Ingrese sus nombres">
+                </div>
+                <div class="form-group">
+                    <label for="surname">Apellidos</label>
+                    <input type="text" id="surname" name="surname" placeholder="Ingrese sus apellidos">
+                </div>
+                <div class="form-group">
+                    <label for="address">Dirección</label>
+                    <input type="text" id="address" name="address" placeholder="Ingrese su dirección">
+                </div>
+                <div class="form-group">
+                    <label for="latitude">Latitud</label>
+                    <input type="text" id="latitude" name="latitude" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="longitude">Longitud</label>
+                    <input type="text" id="longitude" name="longitude" readonly>
+                </div>
+                <!-- En index.html -->
+                <!-- Código HTML adicional en el formulario -->
+                <div class="form-group">
+                    <label for="work_address">Dirección del Trabajo</label>
+                    <input type="text" id="work_address" name="work_address" placeholder="Ingrese la dirección del trabajo">
+                </div>
+                <div class="form-group">
+                    <label for="work_latitude">Latitud del Trabajo</label>
+                    <input type="text" id="work_latitude" name="work_latitude" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="work_longitude">Longitud del Trabajo</label>
+                    <input type="text" id="work_longitude" name="work_longitude" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="button">Guardar Usuario</button>
+                </div>
+            </form>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <!-- Incluye la API de Google Maps con tu clave API -->
+    <script async
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLvqQML1kZWxaAqST31NBQ-Hob6em8lWw&callback=initMap&libraries=places">
+    </script>
+    <script>
+        let map;
+        let residenceMarker;
+        let workMarker;
+        let geocoder;
+
+        function initMap() {
+            // Configuración inicial del mapa centrado en una ubicación predeterminada
+            const initialPosition = { lat: 4.633105802898402, lng: -74.08060327642548 };
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: initialPosition,
+                zoom: 12,
+            });
+
+            // Inicializar el geocoder
+            geocoder = new google.maps.Geocoder();
+
+            // Crear un marcador para la residencia
+            residenceMarker = new google.maps.Marker({
+                position: initialPosition,
+                map: map,
+                draggable: true,
+                label: "R", // R para Residencia
+            });
+
+            // Crear un marcador para el trabajo
+            workMarker = new google.maps.Marker({
+                position: { lat: initialPosition.lat + 0.01, lng: initialPosition.lng + 0.01 },
+                map: map,
+                draggable: true,
+                label: "T", // T para Trabajo
+            });
+
+            // Actualizar ubicación de residencia al arrastrar el marcador
+            residenceMarker.addListener('dragend', function(event) {
+                updateLocation(event.latLng, "residence");
+            });
+
+            // Actualizar ubicación del trabajo al arrastrar el marcador
+            workMarker.addListener('dragend', function(event) {
+                updateLocation(event.latLng, "work");
+            });
+
+            // Actualizar ubicación al hacer clic en el mapa
+            map.addListener("click", (event) => {
+                if (!residenceMarker.getPosition()) {
+                    residenceMarker.setPosition(event.latLng);
+                    updateLocation(event.latLng, "residence");
+                } else {
+                    workMarker.setPosition(event.latLng);
+                    updateLocation(event.latLng, "work");
+                }
+            });
+
+            // Establecer ubicación inicial en los campos de formulario
+            updateLocation(residenceMarker.getPosition(), "residence");
+            updateLocation(workMarker.getPosition(), "work");
+        }
+
+        function updateLocation(latLng, type) {
+            if (type === "residence") {
+                document.getElementById("latitude").value = latLng.lat();
+                document.getElementById("longitude").value = latLng.lng();
+                geocodeLatLng(latLng, "address");
+            } else if (type === "work") {
+                document.getElementById("work_latitude").value = latLng.lat();
+                document.getElementById("work_longitude").value = latLng.lng();
+                geocodeLatLng(latLng, "work_address");
+            }
+        }
+    </script>
+</body>
+</html>
